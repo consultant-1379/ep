@@ -1,0 +1,24 @@
+# tar, tar.gz and gz
+*.tar
+*.tar.gz
+*.gz
+
+*.pyc
+*.egg-info
+dist
+.python-version
+
+# IntelliJ idea folder
+.idea
+
+# Pytest .cache folder
+.cache
+
+# Logs
+*.log
+
+# Binary files
+bin
+
+# Projects eclipse
+.project

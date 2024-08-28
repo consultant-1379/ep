@@ -1,0 +1,113 @@
+EP-001: Simpler definition of seed jobs
+=======================================
+
+To on-board a micro-service to the CI/CD system, developers need to write
+a so-called seed job script. A seed job is a Jenkins job that is listening
+for changes merged into a SCM repository, at a specific location inside the
+repository, containing files with the *.groovy extension.
+
+The files in the specific location inside the repository can contain any
+Groovy code the CI/CD system can execute, but at least one of them should
+contain a `JobDSL`_ specification of a Jenkins job performing some CI/CD task
+for a micro-service (the micro-service code may or may not be in the same
+repository as the JobDSL specification).
+
+.. _JobDSL: https://github.com/jenkinsci/job-dsl-plugin/wiki
+
+Typically a seed job looks something like the following:
+
+.. code-block:: groovy
+
+    pipelineJob('my_ms_seed_job') {
+        concurrentBuild(false)
+        logRotator {
+            numToKeep(15)
+        }
+
+        properties {
+            authorizeProjectProperty {
+                strategy {
+                    specificUsersAuthorizationStrategy {
+                        userid("${AUTHORIZATION_USER}")
+                        useApitoken(false)
+                        apitoken('')
+                        password("${AUTHORIZATION_PASS}")
+                        dontRestrictJobConfiguration(false)
+                    }
+                }
+            }
+        }
+
+        triggers {
+            upstream('jenkins-seed-job', 'SUCCESS')
+            gerrit {
+                events {
+                    changeMerged()
+                }
+
+                project('plain:parent-project/my-project', ['plain:master'])
+
+                configure { gerritTrigger ->
+                    def gerritProjects = gerritTrigger.getAt ('gerritProjects')[0]
+                    def gerritProject = gerritProjects.getAt ('com.sonyericsson.hudson.plugins.gerrit.trigger.hudsontrigger.data.GerritProject')[0]
+                    filePaths = new groovy.util.Node (gerritProject, 'filePaths')
+                    filePath = new groovy.util.Node (filePaths, 'com.sonyericsson.hudson.plugins.gerrit.trigger.hudsontrigger.data.FilePath')
+                    compareType = new groovy.util.Node (filePath, 'compareType', 'ANT')
+                    pattern = new groovy.util.Node (filePath, 'pattern', 'groovy_files/*.groovy')
+                    new groovy.util.Node(gerritTrigger, 'serverName', 'adp')
+                }
+
+                buildSuccessful(null, null)
+            }
+        }
+
+        definition {
+            cps {
+                script('''
+                    throttle(['seed-job']) {
+                        node {
+                            dir('my-ms-code') {
+                                checkout([
+                                    $class: 'GitSCM',
+                                    branches: [[name: 'master']],
+                                    userRemoteConfigs: [[
+                                        url: 'ssh://gerritmirror-ha.lmera.ericsson.se:29418/parent-project/my-project',
+                                        name: 'origin',
+                                        credentialsId: 'gerritpk-adp',
+                                        refspec: ""
+                                    ]],
+                                    extensions: [[
+                                        $class: 'CloneOption',
+                                        noTags: true,
+                                        honorRefspec: true
+                                    ]]
+                                ])
+                                jobDsl removedConfigFilesAction: 'DELETE', removedJobAction: 'DELETE', removedViewAction: 'DELETE', ignoreMissingFiles: true, sandbox: true, targets: 'groovy_files/*.groovy'
+                            }
+                        }
+                    }
+                ''')
+                sandbox(true)
+            }
+        }
+    }
+
+That's quite a bunch of code, and 80% of it is boilerplate. It's be great if a developer could just
+type the data that is specific for his project and let the CI/CD system do the rest.
+
+A possible syntax for defining a seed job would be:
+
+.. code-block:: groovy
+
+    seedJob {
+        name('my_ms_seed_job')
+        serverName('adp')
+        project('parent-project/my-project')
+        gerritUrl('ssh://gerritmirror-ha.lmera.ericsson.se:29418/parent-project/my-project')
+        gerritCredentialId('gerritpk-adp')
+        scriptsPath('groovy_files/*.groovy')
+    }
+
+That syntax would turn the task of on-boarding a micro-service muss less daunting, specially
+for developers not knowing the Groovy and/or JobDSL languages.
+

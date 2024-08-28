@@ -1,0 +1,31 @@
+%
+% ericsson.sty
+%
+% LaTex definitions for Ericsson documents,
+% by Javier Arauz.
+%
+
+\NeedsTeXFormat{LaTeX2e}[1995/12/01]
+\ProvidesPackage{ericsson}[2017/05/04 v1.5.4 LaTeX package (Sphinx markup)]
+
+\AtBeginDocument{%
+  \usepackage{fancyhdr}
+  \fancypagestyle{normal}{
+    \fancyhf{}
+    \lhead{Prepared: \prepared}
+    \chead{No.: \docno}
+    \rhead{Rev.: \rev}
+    \lfoot{{\py@HeaderFamily \@title}}
+    \rfoot{{\py@HeaderFamily\thepage}}
+  }
+
+  \fancypagestyle{plain}{
+    \fancyhf{}
+    \lhead{Prepared: \prepared}
+    \chead{No.: \docno}
+    \rhead{Rev.: \rev}
+    \lfoot{{\py@HeaderFamily \@title}}
+    \rfoot{{\py@HeaderFamily\thepage}}
+  }
+}
+

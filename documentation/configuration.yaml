@@ -1,0 +1,18 @@
+# Docs to upload to OpenALM
+# Physical files MUST be the same as the generated documents in the previous step,
+# except the path to the file.
+# The script move all files, once are generated, to a folder where the upload process
+# take all of them
+# folder_name --> it's like a breadcrumb
+
+projects:
+  - id: udm-5g-cicd-impl
+    name: UDM 5GC CI/CD impl
+    folders:
+      - folder_name: "Enhancement Proposals"
+        docs_to_upload:
+          - name: EP-001
+            file: /data-volume-container/documentation/html/EP-001/EP-001.html
+            type: embedded
+            upload: Y
+
